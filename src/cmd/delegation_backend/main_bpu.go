@@ -157,5 +157,7 @@ func main() {
 
 	// Start server
 	app.IsReady = true
+	log.Infof("Server ready and listening on %s", DELEGATION_BACKEND_LISTEN_TO)
+	log.Infof("Available endpoints: / (root), /v1/submit (submissions), /health (health check)")
 	log.Fatal(http.ListenAndServe(DELEGATION_BACKEND_LISTEN_TO, nil))
 }
