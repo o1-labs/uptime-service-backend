@@ -11,9 +11,9 @@ on:
         required: true
         type: string
 env:
-  ECR_REPOSITORY_URL: 673156464838.dkr.ecr.us-west-2.amazonaws.com
-  ECR_REPOSITORY_NAME: uptime-service-backend
-  DOCKER_TAG_PREFIX: ${{ github.event.inputs.docker_tag_prefix }}
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  REPO_OWNER_LOWER: ${{ github.repository_owner }}
 
 # This allows a subsequently queued workflow run to interrupt previous runs
 concurrency:
@@ -23,17 +23,17 @@ concurrency:
 jobs:
   build-docker-image:
     name: Build and Push Docker Image
-    runs-on: minafoundation-default-runners
+    runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: 🏷️ Generate Tag
         run: |
           BRANCH_OR_TAG=$(basename ${{ github.ref }})
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            PREFIX=${{ env.DOCKER_TAG_PREFIX }}
+            PREFIX="${{ github.event.inputs.docker_tag_prefix }}"
             SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
             echo "TAG=$PREFIX-$BRANCH_OR_TAG-$SHORT_SHA" >> $GITHUB_ENV
           elif [ "${{ github.event_name }}" == "push" ] && [ -n "${{ github.event.ref }}" ]; then
@@ -42,25 +42,34 @@ jobs:
             echo "Invalid event. Exiting..."
             exit 1
           fi
-      - name: 🔑 ECR Login
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-      - name: 🔍 Check if Tag already exists
-        id: checktag
-        uses: tyriis/docker-image-tag-exists@v2.0.1
+      - name: 🔑 Log in to Container Registry
+        uses: docker/login-action@v3
         with:
-          registry: ${{ env.ECR_REPOSITORY_URL}}
-          repository: ${{ env.ECR_REPOSITORY_NAME }}
-          tag: ${{ env.TAG }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
       - name: 📦 Install Nix
-        uses: cachix/install-nix-action@v22
+        uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
+      - name: Repo owner lowercase
+        run: echo "REPO_OWNER_LOWER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: 🛠️ Build Uptime Service Backend Docker Image
-        if: steps.checktag.outputs.tag == 'not found'
+        env:
+          IMAGE_NAME: uptime-service-backend
+        run: nix-shell --run "make docker"
+      
+      - name: 🚚 Tag and Push Uptime Service Backend Docker Image
         run: |
-          TAG=${{ env.TAG }}
-          nix-shell --run "make docker"
-      - name: 🚚 Push Uptime Service Backend Docker Image
-        if: steps.checktag.outputs.tag == 'not found'
-        run: docker push ${{ env.ECR_REPOSITORY_URL}}/${{ env.ECR_REPOSITORY_NAME }}:${{ env.TAG }}
+          # Tag the existing image for GHCR
+          docker tag uptime-service-backend:$TAG ${{ env.REGISTRY }}/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:$TAG
+          # Push to GHCR
+          docker push ${{ env.REGISTRY }}/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:$TAG

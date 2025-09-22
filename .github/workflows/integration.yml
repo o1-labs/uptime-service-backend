@@ -10,13 +10,17 @@ on:
     branches:
       - main
 
+env:
+  REPO_OWNER_LOWER: ${{ github.repository_owner }}
+  IMAGE_NAME: uptime-service-backend
+
 jobs:
   build:
-    runs-on: minafoundation-xlarge-runners
+    runs-on: ubuntu-latest
 
     steps:
     - name: 📥 Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: 📥 Update Git Submodules
       run: |
@@ -24,7 +28,7 @@ jobs:
         git submodule update
 
     - name: 📦 Install Nix
-      uses: cachix/install-nix-action@v22
+      uses: cachix/install-nix-action@v31
       with:
         nix_path: nixpkgs=channel:nixos-unstable
 
@@ -36,7 +40,6 @@ jobs:
 
     - name: 🛠️ Build Docker
       env:
-        IMAGE_NAME: uptime-service-backend
         TAG: integration-test
       run: nix-shell --run "make docker"
 
@@ -58,7 +61,7 @@ jobs:
         minimina node logs -n integration-test -i node-b -r > integration-test/logs/node-b.log
 
     - name: 📎 Upload logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: logs

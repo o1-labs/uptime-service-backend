@@ -10,13 +10,17 @@ on:
     branches: 
       - main
 
+env:
+  REPO_OWNER_LOWER: ${{ github.repository_owner }}
+  IMAGE_NAME: uptime-service-backend-test
+
 jobs:
   build:
-    runs-on: minafoundation-default-runners
+    runs-on: ubuntu-latest
 
     steps:
     - name: 📥 Checkout
-      uses: actions/checkout@v3    
+      uses: actions/checkout@v4
 
     - name: 📥 Update Git Submodules
       run: |
@@ -24,7 +28,7 @@ jobs:
         git submodule update
 
     - name: 📦 Install Nix
-      uses: cachix/install-nix-action@v22
+      uses: cachix/install-nix-action@v31
       with:
         nix_path: nixpkgs=channel:nixos-unstable
 
@@ -33,8 +37,45 @@ jobs:
 
     - name: 🛠️ Build Docker
       env:
-        TAG: uptime-service-backend-test
+        TAG: latest
       run: nix-shell --run "make docker"
 
     - name: 🧪 Test
       run: nix-shell --run "make test"
+
+    - name: 🔑 Log in to Container Registry
+      if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🏷️ Extract branch name
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: echo "branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+      id: extract_branch
+
+    - name: Repo owner lowercase
+      run: echo "REPO_OWNER_LOWER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+    - name: 🏷️ Tag and Push Docker Image (main branch)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        # Tag the existing image for GHCR
+        docker tag ${{ env.IMAGE_NAME }} ghcr.io/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:latest
+        docker tag ${{ env.IMAGE_NAME }} ghcr.io/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:${{ github.sha }}
+        # Push to GHCR
+        docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:latest
+        docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:${{ github.sha }}
+
+    - name: 🏷️ Tag and Push Docker Image (pull request)
+      if: github.event_name == 'pull_request'
+      run: |
+        # Tag the existing image for GHCR with branch name
+        docker tag ${{ env.IMAGE_NAME }}:latest ghcr.io/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:${{ steps.extract_branch.outputs.branch }}
+        docker tag ${{ env.IMAGE_NAME }}:latest ghcr.io/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:${{ github.sha }}
+        # Push to GHCR
+        docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:${{ steps.extract_branch.outputs.branch }}
+        docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/uptime-service-backend:${{ github.sha }}

@@ -43,7 +43,7 @@ case "$1" in
       exit 1
     fi
     # set image name to 673156464838.dkr.ecr.us-west-2.amazonaws.com/uptime-service-backend if IMAGE_NAME is not set
-    IMAGE_NAME=${IMAGE_NAME:-673156464838.dkr.ecr.us-west-2.amazonaws.com/uptime-service-backend}
+    IMAGE_NAME=${IMAGE_NAME:-uptime-service-backend}
     docker build -t "$IMAGE_NAME:$TAG" -f dockerfiles/Dockerfile-delegation-backend .
     ;;
   "")

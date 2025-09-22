@@ -18,6 +18,13 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 type errorResponse struct {
 	Msg string `json:"error"`
 }
@@ -135,10 +142,14 @@ var nilPk Pk
 var nilTime time.Time
 
 func (h *SubmitH) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.app.Log.Infof("Received request: method=%s path=%s remote_addr=%s content_length=%d", r.Method, r.URL.Path, r.RemoteAddr, r.ContentLength)
+
 	if r.ContentLength == -1 {
+		h.app.Log.Warnf("Request missing Content-Length header")
 		w.WriteHeader(411)
 		return
 	} else if r.ContentLength > MAX_SUBMIT_PAYLOAD_SIZE {
+		h.app.Log.Warnf("Request payload too large: %d bytes (max: %d)", r.ContentLength, MAX_SUBMIT_PAYLOAD_SIZE)
 		w.WriteHeader(413)
 		return
 	}
@@ -152,14 +163,16 @@ func (h *SubmitH) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var req submitRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		h.app.Log.Debugf("Error while unmarshaling JSON of /submit request's body: %v", err)
+		h.app.Log.Errorf("Error while unmarshaling JSON of /submit request's body: %v, body preview: %s", err, string(body[:min(len(body), 200)]))
 		w.WriteHeader(400)
 		writeErrorResponse(h.app, &w, "Error decoding payload")
 		return
 	}
 
+	h.app.Log.Infof("Successfully parsed submission from submitter: %s", req.Submitter.String())
+
 	if !req.CheckRequiredFields() {
-		h.app.Log.Debug("One of required fields wasn't provided")
+		h.app.Log.Warnf("Required fields validation failed for submitter: %s", req.Submitter.String())
 		w.WriteHeader(400)
 		writeErrorResponse(h.app, &w, "One of required fields wasn't provided")
 		return
@@ -168,11 +181,15 @@ func (h *SubmitH) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !h.app.WhitelistDisabled {
 		wl := h.app.Whitelist.ReadWhitelist()
 		if (*wl)[req.Submitter] == nil {
+			h.app.Log.Warnf("Submitter not in whitelist: %s", req.Submitter.String())
 			w.WriteHeader(401)
 			message := fmt.Sprintf("Submitter is not registered: %s", req.Submitter)
 			writeErrorResponse(h.app, &w, message)
 			return
 		}
+		h.app.Log.Debugf("Submitter %s found in whitelist", req.Submitter.String())
+	} else {
+		h.app.Log.Debugf("Whitelist disabled, accepting submitter: %s", req.Submitter.String())
 	}
 
 	submittedAt := h.app.Now()
@@ -227,11 +244,15 @@ func (h *SubmitH) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	toSave := make(ObjectsToSave)
 	toSave[ps.Meta] = metaBytes
 	toSave[ps.Block] = []byte(req.Data.Block.data)
+
+	h.app.Log.Infof("Saving submission for submitter %s: block_hash=%s meta_path=%s block_path=%s", req.Submitter.String(), blockHash, ps.Meta, ps.Block)
 	h.app.Save(toSave)
 
 	_, err2 := io.Copy(w, bytes.NewReader([]byte("{\"status\":\"ok\"}")))
 	if err2 != nil {
 		h.app.Log.Debugf("Error while responding with ok status to the user: %v", err2)
+	} else {
+		h.app.Log.Infof("Successfully processed submission from %s", req.Submitter.String())
 	}
 }
 
