@@ -35,10 +35,9 @@ jobs:
         nix_path: nixpkgs=channel:nixos-unstable
 
     - name: 🤌 Get Minimina
-      uses: MinaFoundation/install-minimina-action@v1
+      uses: o1-labs/install-minimina-action@v1
       with:
         stream: stable
-        # commit_or_branch: resource-experiments
 
     - name: 🛠️ Build Docker
       env:
