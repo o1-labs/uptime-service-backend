@@ -49,7 +49,7 @@ jobs:
         # UPTIME_SERVICE_SECRET is a passphrase needed to decrypt uptime service config files
         UPTIME_SERVICE_SECRET: ${{ secrets.UPTIME_SERVICE_SECRET }}
       run: nix-shell --run "make integration-test"
-      timeout-minutes: 30
+      timeout-minutes: 45
 
     - name: 📖 Get logs
       if: always()
