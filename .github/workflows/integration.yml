@@ -35,10 +35,9 @@ jobs:
         nix_path: nixpkgs=channel:nixos-unstable
 
     - name: 🤌 Get Minimina
-      uses: MinaFoundation/install-minimina-action@v1
+      uses: o1-labs/install-minimina-action@v1
       with:
         stream: stable
-        # commit_or_branch: resource-experiments
 
     - name: 🛠️ Build Docker
       env:
@@ -50,7 +49,7 @@ jobs:
         # UPTIME_SERVICE_SECRET is a passphrase needed to decrypt uptime service config files
         UPTIME_SERVICE_SECRET: ${{ secrets.UPTIME_SERVICE_SECRET }}
       run: nix-shell --run "make integration-test"
-      timeout-minutes: 30
+      timeout-minutes: 45
 
     - name: 📖 Get logs
       if: always()

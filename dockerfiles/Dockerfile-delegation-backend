@@ -1,17 +1,26 @@
 FROM golang:1.22
 
+# Install build dependencies for the C reference signer
+RUN apt-get update && apt-get install -y --no-install-recommends gcc make libc6-dev && rm -rf /var/lib/apt/lists/*
+
 # Set the Current Working Directory inside the container
 WORKDIR $GOPATH/src/delegation_backend
+
+# Copy the C reference signer source and build it inside the container
+COPY external/c-reference-signer c-reference-signer
+RUN mkdir -p result/headers && \
+    make -C c-reference-signer clean libmina_signer.so && \
+    cp c-reference-signer/libmina_signer.so result/ && \
+    cp c-reference-signer/*.h result/headers/ && \
+    rm -rf c-reference-signer
 
 # Copy everything from the current directory to the PWD (Present Working Directory) inside the container
 COPY src src
 COPY database /database
-COPY result/headers result/headers
 
 # Download all the dependencies
 RUN cd src && go get -d -v ./...
 
-COPY result/libmina_signer.so result/libmina_signer.so
 ENV LD_LIBRARY_PATH="result"
 ENV AWS_SSL_CERTIFICATE_PATH="/database/cert/sf-class2-root.crt"
 

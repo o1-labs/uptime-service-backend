@@ -17,7 +17,7 @@ const (
 	UPTIME_SERVICE_CONFIG_DIR = TEST_DATA_FOLDER + "/topology/uptime_service_config"
 	APP_CONFIG_FILE           = UPTIME_SERVICE_CONFIG_DIR + "/app_config.json"
 
-	TIMEOUT_IN_S = 900
+	TIMEOUT_IN_S = 1500
 
 	// AWS Keyspaces
 	DATABASE_MIGRATION_DIR   = "../../database/migrations"
