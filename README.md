@@ -122,6 +122,8 @@ If the `CONFIG_FILE` environment variable is not set, the program will fall back
    - `AWS_REGION` - The AWS region.
    - `AWS_ACCESS_KEY_ID` - Your AWS Access Key ID.
    - `AWS_SECRET_ACCESS_KEY` - Your AWS Secret Access Key.
+   - `AWS_ENDPOINT_URL_S3` (optional) - Override the S3 endpoint URL. Honored by the AWS Go SDK and used to point the backend at S3-compatible servers like MinIO or LocalStack. Leave unset for production AWS.
+   - `AWS_S3_FORCE_PATH_STYLE` (optional) - Set to `1` to force path-style addressing (`https://endpoint/bucket/key`). Required when pointing at MinIO or LocalStack, since they don't host buckets as DNS subdomains. Leave unset for production AWS, which uses virtual-hosted style by default.
 
 4. **AWS Keyspaces/Cassandra Configuration**:
 
