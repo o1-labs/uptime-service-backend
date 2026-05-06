@@ -74,7 +74,7 @@ func main() {
 
     app := new(dg.App)
     app.Log = log
-    client := s3.NewFromConfig(awsCfg)
+    client := s3.NewFromConfig(awsCfg, dg.S3OptionsFromEnv)
 
     awsctx := dg.AwsContext{Client: client, BucketName: aws.String(itn.GetBucketName(appCfg)), Prefix: appCfg.NetworkName, Context: ctx, Log: log}
 

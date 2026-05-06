@@ -48,7 +48,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error loading AWS configuration: %v", err)
 		}
-		client := s3.NewFromConfig(awsCfg)
+		client := s3.NewFromConfig(awsCfg, S3OptionsFromEnv)
 		awsctx = AwsContext{Client: client, BucketName: aws.String(GetAWSBucketName(appCfg)), Prefix: appCfg.NetworkName, Context: ctx, Log: log}
 
 	}
