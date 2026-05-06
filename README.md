@@ -1,7 +1,7 @@
 # Uptime Service Backend
 
-[![Build](https://github.com/MinaFoundation/uptime-service-backend/actions/workflows/build.yml/badge.svg)](https://github.com/MinaFoundation/uptime-service-backend/actions/workflows/build.yml)
-[![Integration](https://github.com/MinaFoundation/uptime-service-backend/actions/workflows/integration.yml/badge.svg)](https://github.com/MinaFoundation/uptime-service-backend/actions/workflows/integration.yml)
+[![Build](https://github.com/o1-labs/uptime-service-backend/actions/workflows/build.yml/badge.svg)](https://github.com/o1-labs/uptime-service-backend/actions/workflows/build.yml)
+[![Integration](https://github.com/o1-labs/uptime-service-backend/actions/workflows/integration.yml/badge.svg)](https://github.com/o1-labs/uptime-service-backend/actions/workflows/integration.yml)
 
 As part of delegation program, nodes are to upload some proof of their activity. These proofs are to be accumulated and utilized for scoring. This service provides the nodes with a way to submit their data for score calculation.
 
@@ -281,7 +281,7 @@ $ nix-shell
 [nix-shell]$ TAG=uptime-service-backend make docker
 ```
 
-To create the docker image and push it to AWS ECR you can use the [Build and push image to ECR](https://github.com/MinaFoundation/uptime-service-backend/actions/workflows/push-image.yaml) Github action on the target branch or tag.
+To build and publish the Docker image to GitHub Container Registry (`ghcr.io/o1-labs/uptime-service-backend`), use the [Publish](https://github.com/o1-labs/uptime-service-backend/actions/workflows/publish.yaml) GitHub Action — triggered automatically on git tags, or manually via `workflow_dispatch`.
 
 ## Testing
 
