@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -112,6 +113,7 @@ type App struct {
 	WhitelistDisabled       bool
 	VerifySignatureDisabled bool
 	NetworkId               uint8
+	OnlineStorage           *OnlineStorage
 	Save                    func(ObjectsToSave)
 	Now                     nowFunc
 	IsReady                 bool
@@ -247,6 +249,13 @@ func (h *SubmitH) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.app.Log.Infof("Saving submission for submitter %s: block_hash=%s meta_path=%s block_path=%s", req.Submitter.String(), blockHash, ps.Meta, ps.Block)
 	h.app.Save(toSave)
+	if h.app.OnlineStorage != nil {
+		h.app.OnlineStorage.Record(OnlineRecord{
+			RemoteAddr:         normalizeRemoteAddr(remoteAddr),
+			Submitter:          req.Submitter.String(),
+			GraphqlControlPort: req.Data.GraphqlControlPort,
+		}, submittedAt)
+	}
 
 	_, err2 := io.Copy(w, bytes.NewReader([]byte("{\"status\":\"ok\"}")))
 	if err2 != nil {
@@ -260,4 +269,22 @@ func (app *App) NewSubmitH() *SubmitH {
 	s := new(SubmitH)
 	s.app = app
 	return s
+}
+
+func normalizeRemoteAddr(remoteAddr string) string {
+	if strings.Contains(remoteAddr, ",") {
+		remoteAddr = strings.TrimSpace(strings.Split(remoteAddr, ",")[0])
+	}
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err == nil {
+		return host
+	}
+	if ip := net.ParseIP(remoteAddr); ip != nil {
+		return remoteAddr
+	}
+	if strings.Count(remoteAddr, ":") == 1 {
+		parts := strings.SplitN(remoteAddr, ":", 2)
+		return parts[0]
+	}
+	return remoteAddr
 }

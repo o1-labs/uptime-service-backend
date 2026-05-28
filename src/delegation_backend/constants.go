@@ -12,6 +12,7 @@ const MAX_SUBMIT_PAYLOAD_SIZE = 50000000 // max payload size in bytes
 const DELEGATION_BACKEND_LISTEN_TO = ":8080"
 const TIME_DIFF_DELTA time.Duration = -5 * 60 * 1000000000 // -5m
 const WHITELIST_REFRESH_INTERVAL = 10 * 60 * 1000000000    // 10m
+const ONLINE_KEEP_INTERVAL = 20 * time.Minute
 
 var PK_PREFIX = [...]byte{1, 1}
 var SIG_PREFIX = [...]byte{1}

@@ -59,6 +59,7 @@ func testSubmitH(maxAttempt int, initWl Whitelist) (*ObjectsToSave, *SubmitH, *t
 	counter, tm := newTestAttemptCounter(1)
 	app.SubmitCounter = counter
 	app.Now = tm.Now
+	app.OnlineStorage = NewOnlineStorage(log, app.Now)
 	wlMvar := new(WhitelistMVar)
 	wlMvar.Replace(&initWl)
 	app.Whitelist = wlMvar
@@ -203,6 +204,16 @@ func TestSuccess(t *testing.T) {
 			!bytes.Equal((*objs)[paths.Block], req.Data.Block.data) {
 			t.Logf("Content check failed for %s", f)
 			t.FailNow()
+		}
+		online := sh.app.OnlineStorage.recentRecords()
+		if len(online) != 1 {
+			t.Fatalf("expected one online record for %s, got %d", f, len(online))
+		}
+		if online[0].Submitter != req.Submitter.String() {
+			t.Fatalf("unexpected online submitter for %s: got %s want %s", f, online[0].Submitter, req.Submitter.String())
+		}
+		if online[0].RemoteAddr != "192.0.2.1" {
+			t.Fatalf("unexpected online remote_addr for %s: got %s want %s", f, online[0].RemoteAddr, "192.0.2.1")
 		}
 	}
 }
