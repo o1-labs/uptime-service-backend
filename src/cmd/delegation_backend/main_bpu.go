@@ -109,6 +109,7 @@ func main() {
 
 	// App other configurations
 	app.Now = func() time.Time { return time.Now() }
+	app.OnlineStorage = NewOnlineStorage(log, app.Now)
 	requestsPerPkHourly := SetRequestsPerPkHourly(log)
 	app.SubmitCounter = NewAttemptCounter(requestsPerPkHourly)
 	log.Infof("Max requests per pk hourly: %v", requestsPerPkHourly)
@@ -118,6 +119,7 @@ func main() {
 		_, _ = rw.Write([]byte("delegation backend service"))
 	})
 	http.Handle("/v1/submit", app.NewSubmitH())
+	http.Handle("/v1/online", app.OnlineStorage)
 
 	// Health check endpoint
 	http.HandleFunc("/health", HealthHandler(func() bool {
