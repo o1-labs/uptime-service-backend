@@ -65,3 +65,31 @@ func TestNormalizeRemoteAddr(t *testing.T) {
 		})
 	}
 }
+
+func TestRequestRemoteAddr(t *testing.T) {
+	testCases := []struct {
+		name       string
+		remoteAddr string
+		xff        string
+		want       string
+	}{
+		{name: "no xff falls back to remote addr", remoteAddr: "192.0.2.1:1234", want: "192.0.2.1:1234"},
+		{name: "uses public xff hop", remoteAddr: "127.0.0.1:9999", xff: "127.0.0.1, 203.0.113.9", want: "203.0.113.9"},
+		{name: "uses first public xff after private hops", remoteAddr: "127.0.0.1:9999", xff: "10.0.0.4, 172.16.0.8, 198.51.100.7", want: "198.51.100.7"},
+		{name: "falls back to first valid xff when no public hop", remoteAddr: "127.0.0.1:9999", xff: "127.0.0.1, 10.0.0.4", want: "127.0.0.1"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/v1/submit", nil)
+			req.RemoteAddr = tc.remoteAddr
+			if tc.xff != "" {
+				req.Header.Set("X-Forwarded-For", tc.xff)
+			}
+			got := requestRemoteAddr(req)
+			if got != tc.want {
+				t.Fatalf("unexpected request remote addr: got %q want %q", got, tc.want)
+			}
+		})
+	}
+}
