@@ -229,11 +229,7 @@ func (h *SubmitH) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	blockHash := req.GetBlockDataHash()
 	ps := makePaths(submittedAt, blockHash, req.Submitter)
 
-	remoteAddr := r.Header.Get("X-Forwarded-For")
-	if remoteAddr == "" {
-		// If there is no X-Forwarded-For header, use the remote address
-		remoteAddr = r.RemoteAddr
-	}
+	remoteAddr := requestRemoteAddr(r)
 
 	metaBytes, err1 := req.MakeMetaToBeSaved(remoteAddr)
 	if err1 != nil {
@@ -271,6 +267,33 @@ func (app *App) NewSubmitH() *SubmitH {
 	return s
 }
 
+func requestRemoteAddr(r *http.Request) string {
+	forwardedFor := r.Header.Get("X-Forwarded-For")
+	if forwardedFor == "" {
+		return r.RemoteAddr
+	}
+
+	candidates := strings.Split(forwardedFor, ",")
+	firstValid := ""
+	for _, candidate := range candidates {
+		normalized := normalizeRemoteAddr(strings.TrimSpace(candidate))
+		if normalized == "" {
+			continue
+		}
+		if firstValid == "" {
+			firstValid = normalized
+		}
+		ip := net.ParseIP(normalized)
+		if ip != nil && isPublicIP(ip) {
+			return normalized
+		}
+	}
+	if firstValid != "" {
+		return firstValid
+	}
+	return r.RemoteAddr
+}
+
 func normalizeRemoteAddr(remoteAddr string) string {
 	if strings.Contains(remoteAddr, ",") {
 		remoteAddr = strings.TrimSpace(strings.Split(remoteAddr, ",")[0])
@@ -287,4 +310,13 @@ func normalizeRemoteAddr(remoteAddr string) string {
 		return parts[0]
 	}
 	return remoteAddr
+}
+
+func isPublicIP(ip net.IP) bool {
+	return !ip.IsLoopback() &&
+		!ip.IsPrivate() &&
+		!ip.IsLinkLocalMulticast() &&
+		!ip.IsLinkLocalUnicast() &&
+		!ip.IsMulticast() &&
+		!ip.IsUnspecified()
 }
